@@ -1,0 +1,20 @@
+name: wp_homey__example
+description: Demonstrates how to use the wp_homey_api plugin.
+
+environment:
+  sdk: '>=2.19.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  wp_homey_api:
+    path: ../
+
+flutter:
+
+  uses-material-design: true

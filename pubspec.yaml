@@ -1,0 +1,33 @@
+name: wp_homey_api
+description: WordPress and Homey API for Flutter Mobile. API allows you to login, register new users, get users, listings info and more.
+version: 4.0.1
+homepage: https://simonecascioli.it
+repository: https://github.com/simlimone/wp-homey-api-flutter
+issue_tracker: https://github.com/simlimone/wp-homey-api-flutter/issues
+documentation: https://simonecascioli.it/docs/flutter/wp-homey-api
+
+environment:
+  sdk: '>=2.19.0 <4.0.0'
+  flutter: ">=1.17.0"
+
+dependencies:
+  dio: ^5.7.0
+  nylo_support: ^6.1.1
+  flutter_secure_storage: ^9.2.2
+  flutter:
+    sdk: flutter
+  collection: ^1.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  mockito: ^5.4.4
+  build_runner: ^2.4.8
+
+screenshots:
+  - description: The Wordpress package logo.
+    path: screenshots/logo.png
+
+flutter:
+  uses-material-design: true
