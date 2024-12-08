@@ -1,16 +1,28 @@
 import 'package:collection/collection.dart' show IterableExtension;
 
 class WPUserInfoResponse {
-  Data? data;
+  bool? success;
+  int? statusCode;
+  String? code;
   String? message;
-  int? status;
+  Data? data;
 
-  WPUserInfoResponse({this.data, this.message, this.status});
+  WPUserInfoResponse({
+    this.success,
+    this.statusCode,
+    this.code,
+    this.message,
+    this.data,
+  });
 
   WPUserInfoResponse.fromJson(Map<String, dynamic> json) {
-    data = json['data'] != null ? new Data.fromJson(json['data']) : null;
-    message = json['message'];
-    status = json['status'];
+    data = json['data'] != null && json['data'] != null && json['data'] != {}
+        ? new Data.fromJson(json['data'])
+        : null;
+    success = json['success'] ?? false;
+    statusCode = json['statusCode'] ?? -1;
+    code = json['code'] ?? null;
+    message = json['message'] ?? 'Error retrieving message';
   }
 
   Map<String, dynamic> toJson() {
@@ -19,7 +31,9 @@ class WPUserInfoResponse {
       data['data'] = this.data!.toJson();
     }
     data['message'] = this.message;
-    data['status'] = this.status;
+    data['statusCode'] = this.statusCode;
+    data['code'] = this.code;
+    data['success'] = this.success;
     return data;
   }
 }

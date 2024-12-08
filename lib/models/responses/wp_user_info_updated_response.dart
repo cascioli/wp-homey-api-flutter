@@ -13,21 +13,43 @@
 // IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
-class WPUserInfoUpdatedResponse {
-  String? message;
-  int? status;
+import 'package:wp_homey_api/models/wp_user.dart';
 
-  WPUserInfoUpdatedResponse({this.message, this.status});
+class WPUserInfoUpdatedResponse {
+  bool? success;
+  int? statusCode;
+  String? code;
+  String? message;
+  WpUser? data;
+
+  WPUserInfoUpdatedResponse({
+    this.success,
+    this.statusCode,
+    this.code,
+    this.message,
+    this.data,
+  });
 
   WPUserInfoUpdatedResponse.fromJson(Map<String, dynamic> json) {
-    message = json['message'];
-    status = json['status'];
+    success = json['success'] ?? false;
+    statusCode = json['statusCode'] ?? -1;
+    code = json['code'] ?? null;
+    message = json['message'] ?? 'Error retrieving message';
+
+    data = json['data'] != null && json['data'] != [] && json['data'] != {}
+        ? new WpUser.fromJson(json['data'])
+        : null;
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
+    if (this.data != null) {
+      data['data'] = this.data!.toJson();
+    }
     data['message'] = this.message;
-    data['status'] = this.status;
+    data['statusCode'] = this.statusCode;
+    data['code'] = this.code;
+    data['success'] = this.success;
     return data;
   }
 }

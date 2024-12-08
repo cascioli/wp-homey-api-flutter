@@ -13,17 +13,31 @@
 // IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
-class WPUserRegisterResponse {
-  Data? data;
-  String? message;
-  int? status;
+import 'package:wp_homey_api/models/wp_user.dart';
 
-  WPUserRegisterResponse({this.data, this.message, this.status});
+class WPUserRegisterResponse {
+  bool? success;
+  int? statusCode;
+  String? code;
+  String? message;
+  WpUser? data;
+
+  WPUserRegisterResponse({
+    this.success,
+    this.statusCode,
+    this.code,
+    this.message,
+    this.data,
+  });
 
   WPUserRegisterResponse.fromJson(Map<String, dynamic> json) {
-    data = json['data'] != null ? new Data.fromJson(json['data']) : null;
-    message = json['message'];
-    status = json['status'];
+    data = json['data'] != null && json['data'] != []
+        ? new WpUser.fromJson(json['data'])
+        : null;
+    success = json['success'] ?? false;
+    statusCode = json['statusCode'] ?? -1;
+    code = json['code'] ?? null;
+    message = json['message'] ?? 'Error retrieving message';
   }
 
   Map<String, dynamic> toJson() {
@@ -32,68 +46,9 @@ class WPUserRegisterResponse {
       data['data'] = this.data!.toJson();
     }
     data['message'] = this.message;
-    data['status'] = this.status;
-    return data;
-  }
-}
-
-class Data {
-  int? userId;
-  String? userToken;
-  int? expiry;
-  String? email;
-  String? username;
-  String? firstName;
-  String? lastName;
-  String? avatar;
-  String? createdAt;
-
-  Data(
-      {this.userId,
-      this.userToken,
-      this.expiry,
-      this.email,
-      this.username,
-      this.firstName,
-      this.lastName,
-      this.avatar,
-      this.createdAt});
-
-  Data.fromJson(Map<String, dynamic> json) {
-    userId = json['user_id'];
-    userToken = json['user_token'];
-    expiry = json['expiry'];
-    if (json.containsKey('email')) {
-      email = json['email'];
-    }
-    if (json.containsKey('username')) {
-      username = json['username'];
-    }
-    if (json.containsKey('first_name')) {
-      firstName = json['first_name'];
-    }
-    if (json.containsKey('last_name')) {
-      lastName = json['last_name'];
-    }
-    if (json.containsKey('avatar')) {
-      avatar = json['avatar'];
-    }
-    if (json.containsKey('created_at')) {
-      createdAt = json['created_at'];
-    }
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.userId;
-    data['user_token'] = this.userToken;
-    data['expiry'] = this.expiry;
-    data['email'] = this.email;
-    data['username'] = this.username;
-    data['first_name'] = this.firstName;
-    data['last_name'] = this.lastName;
-    data['avatar'] = this.avatar;
-    data['created_at'] = this.createdAt;
+    data['statusCode'] = this.statusCode;
+    data['code'] = this.code;
+    data['success'] = this.success;
     return data;
   }
 }

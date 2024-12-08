@@ -13,28 +13,42 @@
 // IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
-class WPUserDeleteResponse {
-  List<dynamic>? data;
-  String? message;
-  int? status;
+import 'package:wp_homey_api/models/wp_user.dart';
 
-  WPUserDeleteResponse({this.data, this.message, this.status});
+class WPUserDeleteResponse {
+  bool? success;
+  int? statusCode;
+  String? code;
+  String? message;
+  WpUser? data;
+
+  WPUserDeleteResponse({
+    this.success,
+    this.statusCode,
+    this.code,
+    this.message,
+    this.data,
+  });
 
   WPUserDeleteResponse.fromJson(Map<String, dynamic> json) {
     if (json['data'] != null) {
       data = json['data'];
     }
-    message = json['message'];
-    status = json['status'];
+    message = json['message'] ?? 'Error retrieving message';
+    statusCode = json['statusCode'] ?? -1;
+    code = json['code'] ?? 'error';
+    success = json['success'] ?? false;
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
     if (this.data != null) {
-      data['data'] = this.data!.map((v) => v.toJson()).toList();
+      data['data'] = this.data!.toJson();
     }
     data['message'] = this.message;
-    data['status'] = this.status;
+    data['statusCode'] = this.statusCode;
+    data['code'] = this.code;
+    data['success'] = this.success;
     return data;
   }
 }

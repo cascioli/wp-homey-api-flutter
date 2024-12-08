@@ -71,14 +71,13 @@ class WPAppNetworkManager {
     WPUserLoginResponse wpUserLoginResponse =
         WPUserLoginResponse.fromJson(json);
 
-    String? userToken = wpUserLoginResponse.data?.userToken;
+    String? userToken = wpUserLoginResponse.data?.token;
 
     if (userToken != null && saveTokenToLocalStorage) {
-      WpUser wpUser = WpUser.fromWPUserLoginResponse(wpUserLoginResponse);
+      WpUser wpUser = wpUserLoginResponse.data!;
       await WPHomeyAPI.wpLogin(wpUser);
     }
 
-    print("wpUserLoginResponseData: $wpUserLoginResponse");
     return wpUserLoginResponse;
   }
 
@@ -126,10 +125,10 @@ class WPAppNetworkManager {
     }
     WPUserRegisterResponse wPUserRegisterResponse =
         WPUserRegisterResponse.fromJson(json);
-    String? userToken = wPUserRegisterResponse.data?.userToken;
+    String? userToken = wPUserRegisterResponse.data?.token;
 
     if (userToken != null && saveTokenToLocalStorage) {
-      WpUser wpUser = WpUser.fromWPUserRegisterResponse(wPUserRegisterResponse);
+      WpUser wpUser = wPUserRegisterResponse.data!;
       await WPHomeyAPI.wpLogin(wpUser);
     }
     return wPUserRegisterResponse;
@@ -307,12 +306,6 @@ class WPAppNetworkManager {
 
       if (body == null) {
         body = {};
-      }
-
-      if (body.containsKey("username") && body.containsKey("password")) {
-        url =
-            url + "?username=${body["username"]}&password=${body["password"]}";
-        body = null;
       }
 
       response = await dio.post(

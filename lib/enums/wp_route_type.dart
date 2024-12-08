@@ -46,7 +46,11 @@ enum WPRouteType {
   /// For WordPress
   AuthLogin,
 
-  /// Route type [WPRouteType.AuthVerify] is used to verify an existing nonce token.
+  /// Route type [WPRouteType.AuthValidate] is used to verify an existing nonce token.
   /// For WordPress
   AuthValidate,
+
+  /// Route type [WPRouteType.AuthRefresh] is used to refresh the token without credentials.
+  /// For WordPress
+  AuthRefresh,
 }

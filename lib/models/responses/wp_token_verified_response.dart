@@ -13,17 +13,31 @@
 // IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
+import 'package:wp_homey_api/models/wp_user.dart';
+
 class WPTokenVerifiedResponse {
-  Data? data;
+  bool? success;
+  int? statusCode;
   String? code;
   String? message;
+  WpUser? data;
 
-  WPTokenVerifiedResponse({this.data, this.message, this.code});
+  WPTokenVerifiedResponse({
+    this.success,
+    this.statusCode,
+    this.code,
+    this.message,
+    this.data,
+  });
 
   WPTokenVerifiedResponse.fromJson(Map<String, dynamic> json) {
-    data = json['data'] != null ? new Data.fromJson(json['data']) : null;
-    code = json['code'];
-    message = json['message'];
+    data = json['data'] != null && json['data'] != {} && json['data'] != []
+        ? new WpUser.fromJson(json['data'])
+        : null;
+    code = json['code'] ?? 'error';
+    statusCode = json['statusCode'] ?? -1;
+    message = json['message'] ?? 'Error retrieving message';
+    success = json['success'] ?? false;
   }
 
   Map<String, dynamic> toJson() {
@@ -33,24 +47,8 @@ class WPTokenVerifiedResponse {
     }
     data['code'] = this.code;
     data['message'] = this.message;
-    return data;
-  }
-}
-
-class Data {
-  bool? isValid;
-
-  Data({this.isValid});
-
-  Data.fromJson(Map<String, dynamic> json) {
-    isValid = json['code'] == 'jwt_auth_valid_token';
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['code'] = this.isValid == true
-        ? 'jwt_auth_valid_token'
-        : 'jwt_auth_invalid_token';
+    data['statusCode'] = this.statusCode;
+    data['success'] = this.success;
     return data;
   }
 }

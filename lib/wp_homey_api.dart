@@ -71,12 +71,17 @@ class WPHomeyAPI {
 
   /// Login a user with the [WpUser]
   static wpLogin(WpUser wpUser) async {
-    print("Json Encoded: ${jsonEncode(wpUser.toJson())}");
-
     await _secureStorage.write(
       key: "authLogin",
       value: jsonEncode(wpUser.toJson()),
     );
+
+    if (wpUser.refreshToken != null) {
+      await _secureStorage.write(
+        key: "refreshToken",
+        value: wpUser.refreshToken,
+      );
+    }
   }
 
   /// Logout a user
@@ -85,7 +90,7 @@ class WPHomeyAPI {
   }
 
   /// Authenticate a user if they are logged in
-  static wpAuth() async {
+  static Future<WpUser?> wpAuth() async {
     final data = await _secureStorage.read(key: "authLogin");
     if (data != null) {
       return WpUser.fromJson(jsonDecode(data));
