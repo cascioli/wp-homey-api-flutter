@@ -56,8 +56,8 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
-    print(wpUserLoginResponse.data?.userToken);
-    print(wpUserLoginResponse.data?.userId);
+    print(wpUserLoginResponse.data?.token);
+    print(wpUserLoginResponse.data?.id);
 
     // GET USER INFO
     WPUserInfoResponse? wpUserInfoResponse =
