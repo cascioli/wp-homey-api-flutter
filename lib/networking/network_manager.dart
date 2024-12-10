@@ -25,6 +25,7 @@ import '/models/wp_user.dart';
 import '../wp_homey_api.dart';
 import '/enums/wp_route_type.dart';
 import '/models/responses/wp_user_info_response.dart';
+import 'package:collection/collection.dart';
 
 /// A networking class to manage all the APIs from "wp_homey_api"
 class WPAppNetworkManager {
@@ -47,21 +48,29 @@ class WPAppNetworkManager {
   /// [Exception] for any other reason.
   Future<WPUserLoginResponse> wpLogin(
       {String? username,
-      required String password,
-      String? tokenExpiryAt,
+      String? password,
+      String? refreshToken,
       bool saveTokenToLocalStorage = true}) async {
     // Creates payload for login
     Map<String, dynamic> payload = {};
     if (username != null) payload["username"] = username;
-    payload["password"] = password;
-    if (tokenExpiryAt != null) payload["expiry"] = tokenExpiryAt;
+    if (password != null) payload["password"] = password;
+
+    payload["device"] = WPHomeyAPI.instance.getUniqueDeviceId() ?? "null";
 
     // send http request
-    final json = await _http(
+    final response = await _http(
       method: "POST",
       url: _urlForRouteType(WPRouteType.AuthLogin),
       body: payload,
+      refreshToken: refreshToken,
     );
+
+    List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
+    final _refreshTokenCookie = cookies
+        ?.firstWhereOrNull((element) => element.startsWith('refresh_token='));
+
+    final json = response?.data;
 
     // return response
     if (_jsonHasBadStatus(json)) {
@@ -70,6 +79,14 @@ class WPAppNetworkManager {
 
     WPUserLoginResponse wpUserLoginResponse =
         WPUserLoginResponse.fromJson(json);
+
+    if (cookies != null &&
+        _refreshTokenCookie != null &&
+        wpUserLoginResponse.data != null) {
+      wpUserLoginResponse.data = wpUserLoginResponse.data?.copyWith(
+        refreshToken: () => _extractRefreshTokenFromCookie(_refreshTokenCookie),
+      );
+    }
 
     String? userToken = wpUserLoginResponse.data?.token;
 
@@ -96,7 +113,6 @@ class WPAppNetworkManager {
       {required String email,
       required String password,
       String? username,
-      String? expiry,
       Map<String, dynamic>? args,
       bool saveTokenToLocalStorage = true}) async {
     if (username == null) {
@@ -110,28 +126,43 @@ class WPAppNetworkManager {
       "username": username,
       "args": args
     };
-    if (expiry != null) payload["expiry"] = expiry;
+    payload["device"] = WPHomeyAPI.instance.getUniqueDeviceId() ?? "null";
 
     // send http request
-    final json = await _http(
+    final response = await _http(
       method: "POST",
       url: _urlForRouteType(WPRouteType.UserRegister),
       body: payload,
     );
 
+    List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
+    final _refreshTokenCookie = cookies
+        ?.firstWhereOrNull((element) => element.startsWith('refresh_token='));
+
+    final json = response?.data;
+
     // return response
     if (_jsonHasBadStatusUserRegistration(json)) {
       return _throwExceptionForStatusCode(json);
     }
-    WPUserRegisterResponse wPUserRegisterResponse =
+    WPUserRegisterResponse wpUserRegisterResponse =
         WPUserRegisterResponse.fromJson(json);
-    String? userToken = wPUserRegisterResponse.data?.token;
+
+    if (cookies != null &&
+        _refreshTokenCookie != null &&
+        wpUserRegisterResponse.data != null) {
+      wpUserRegisterResponse.data = wpUserRegisterResponse.data?.copyWith(
+        refreshToken: () => _extractRefreshTokenFromCookie(_refreshTokenCookie),
+      );
+    }
+
+    String? userToken = wpUserRegisterResponse.data?.token;
 
     if (userToken != null && saveTokenToLocalStorage) {
-      WpUser wpUser = wPUserRegisterResponse.data!;
+      WpUser wpUser = wpUserRegisterResponse.data!;
       await WPHomeyAPI.wpLogin(wpUser);
     }
-    return wPUserRegisterResponse;
+    return wpUserRegisterResponse;
   }
 
   /// Sends a request to check if a given [token] value is still valid.
@@ -140,17 +171,63 @@ class WPAppNetworkManager {
   /// Throws an [Exception] if fails
   Future<WPTokenVerifiedResponse> wpAuthValidate({String? token}) async {
     // send http request
-    final json = await _http(
+    final response = await _http(
       method: "POST",
       url: _urlForRouteType(WPRouteType.AuthValidate),
       userToken: token,
       shouldAuthRequest: true,
     );
 
+    final json = response?.data;
+
     // return response
     return _jsonHasBadStatus(json)
         ? this._throwExceptionForStatusCode(json)
         : WPTokenVerifiedResponse.fromJson(json);
+  }
+
+  /// Sends a request to refresh [token] value.
+  ///
+  /// Returns a [WPUserLoginResponse] future.
+  /// Throws an [Exception] if fails
+  Future<WPUserLoginResponse> wpAuthRefresh({String? refreshToken}) async {
+    Map<String, dynamic> payload = {
+      "device": WPHomeyAPI.instance.getUniqueDeviceId() ?? "null",
+    };
+
+    // send http request
+    final response = await _http(
+      method: "POST",
+      url: _urlForRouteType(WPRouteType.AuthRefresh),
+      refreshToken: refreshToken,
+      shouldAuthRequest: true,
+      body: payload,
+    );
+
+    final json = response?.data;
+
+    // return response
+    if (_jsonHasBadStatus(json)) {
+      return _throwExceptionForStatusCode(json);
+    }
+
+    WPUserLoginResponse wpUserLoginResponse =
+        WPUserLoginResponse.fromJson(json);
+
+    List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
+    final _refreshTokenCookie = cookies
+        ?.firstWhereOrNull((element) => element.startsWith('refresh_token='));
+
+    if (cookies != null &&
+        _refreshTokenCookie != null &&
+        wpUserLoginResponse.data != null) {
+      wpUserLoginResponse.data = wpUserLoginResponse.data?.copyWith(
+        refreshToken: () => _extractRefreshTokenFromCookie(_refreshTokenCookie),
+      );
+    }
+
+    // return response
+    return wpUserLoginResponse;
   }
 
   /// Sends a request to get a users WordPress info using a valid [userToken].
@@ -160,12 +237,14 @@ class WPAppNetworkManager {
   /// Throws an [Exception] if fails
   Future<WPUserInfoResponse> wpGetUserInfo({String? userToken}) async {
     // send http request
-    final json = await _http(
+    final response = await _http(
       method: "GET",
       url: _urlForRouteType(WPRouteType.UserInfo),
       userToken: userToken,
       shouldAuthRequest: true,
     );
+
+    final json = response?.data;
 
     // return response
     return _jsonHasBadStatus(json)
@@ -196,13 +275,15 @@ class WPAppNetworkManager {
     }
 
     // send http request
-    final json = await _http(
+    final response = await _http(
       method: "POST",
       url: _urlForRouteType(WPRouteType.UserUpdateInfo),
       userToken: userToken,
       shouldAuthRequest: true,
       body: payload,
     );
+
+    final json = response?.data;
 
     // return response
     return _jsonHasBadStatus(json)
@@ -253,13 +334,15 @@ class WPAppNetworkManager {
     Map<String, dynamic> payload = {"user_login": userEmail};
 
     // send http request
-    final json = await _http(
+    final response = await _http(
       method: "POST",
       url: _urlForRouteType(WPRouteType.UserUpdatePassword),
       body: payload,
       userToken: userToken,
       shouldAuthRequest: false,
     );
+
+    final json = response?.data;
 
     // return response
     return _jsonHasBadStatus(json)
@@ -272,11 +355,12 @@ class WPAppNetworkManager {
   /// you can use these if the request requires them.
   ///
   /// Returns a [dynamic] response from the server.
-  Future<dynamic> _http({
+  Future<Response?> _http({
     required String method,
     required String url,
     Map<String, dynamic>? body,
     String? userToken,
+    String? refreshToken,
     bool shouldAuthRequest = false,
     bool shouldSendformHeader = false,
   }) async {
@@ -284,7 +368,7 @@ class WPAppNetworkManager {
     if (method == "GET") {
       response = await dio.get(url);
     } else if (method == "POST") {
-      Map<String, String> headers = {
+      Map<String, dynamic> headers = {
         HttpHeaders.contentTypeHeader: "application/json",
         HttpHeaders.acceptHeader: "*/*",
         HttpHeaders.acceptEncodingHeader: "gzip, deflate, br",
@@ -297,12 +381,29 @@ class WPAppNetworkManager {
 
       // Aggiungiamo il token JWT all'header se richiesto
       String? userTokenFromStorage = await WPHomeyAPI.wpUserToken();
+
+      // Aggiungiamo il refresh token JWT ai cookie se richiesto
+      String? userRefreshTokenFromStorage =
+          await WPHomeyAPI.wpUserRefreshToken();
+
+      if (userRefreshTokenFromStorage != null) {
+        headers[HttpHeaders.cookieHeader] =
+            "refresh_token=$userRefreshTokenFromStorage";
+      }
+
+      if (refreshToken != null) {
+        headers[HttpHeaders.cookieHeader] =
+            "refresh_token=$userRefreshTokenFromStorage";
+      }
+
       if (shouldAuthRequest && userTokenFromStorage != null) {
         headers['Authorization'] = 'Bearer $userTokenFromStorage';
       }
       if (userToken != null) {
         headers['Authorization'] = 'Bearer $userToken';
       }
+
+      print("Header: ${headers}");
 
       if (body == null) {
         body = {};
@@ -323,7 +424,9 @@ class WPAppNetworkManager {
           result: response.data.toString());
     }
 
-    return response?.data;
+    return response;
+
+    // return response?.data;
   }
 
   /// Logs the output of a app request.
@@ -341,26 +444,36 @@ class WPAppNetworkManager {
     if (WPHomeyAPI.instance.shouldDebug()!) log(strOutput);
   }
 
-  /// Checks if a response payload has a bad status (=> 500).
+  String? _extractRefreshTokenFromCookie(String cookie) {
+    const start = "refresh_token=";
+    const end = ";";
+
+    final startIndex = cookie.indexOf(start);
+    final endIndex = cookie.indexOf(end, startIndex + start.length);
+
+    return cookie.substring(startIndex + start.length, endIndex);
+  }
+
+  /// Checks if a response payload has a bad status ().
   ///
   /// Returns [bool] true if status is => 500.
   _jsonHasBadStatus(json) {
-    if (json["status"] == null) {
+    if (json["statusCode"] == null) {
       return false;
     }
 
-    return (json["status"] >= 500 ||
+    return (json["statusCode"] >= 500 ||
         json["code"] == "jwt_auth_invalid_token" ||
-        json["status"] == 403);
+        json["statusCode"] == 403);
   }
 
   /// Checks if a user registration response payload has a bad status (400,401,404).
   ///
   /// Returns [bool] true if status is 400,401,404.
   _jsonHasBadStatusUserRegistration(json) {
-    return (json["status"] == 400 ||
-        json["status"] == 401 ||
-        json["status"] == 404);
+    return (json["statusCode"] == 400 ||
+        json["statusCode"] == 401 ||
+        json["statusCode"] == 404);
   }
 
   /// Creates an endpoint with the baseUrl and path.
@@ -393,6 +506,10 @@ class WPAppNetworkManager {
       case WPRouteType.AuthValidate:
         {
           return "/jwt-auth/$jwtApiVersion/token/validate";
+        }
+      case WPRouteType.AuthRefresh:
+        {
+          return "/jwt-auth/$jwtApiVersion/token/refresh";
         }
       // WORDPRESS API
       case WPRouteType.UserRegister:
@@ -434,7 +551,9 @@ class WPAppNetworkManager {
   }
 
   /// Throws an exception from the [json] status returned from payload.
-  _throwExceptionForStatusCode(json) {
+  _throwExceptionForStatusCode(Response? response) {
+    final json = response?.data;
+
     if (json != null && json['status'] != null) {
       int? statusCode = json["status"];
       String? code = json["code"];

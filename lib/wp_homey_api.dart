@@ -2,7 +2,9 @@ library wp_homey_api;
 
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:unique_identifier/unique_identifier.dart';
 import '/helpers/typedefs.dart';
 import '/models/wp_user.dart';
 import '/networking/network_manager.dart';
@@ -30,6 +32,9 @@ class WPHomeyAPI {
   /// Debug boolean for outputting to the log
   bool? _shouldDebug;
 
+  /// Unique device identifier for Wordpress JWT API
+  String? _uniqueDeviceId;
+
   /// Default API root for your WordPress site
   String _apiPath = "/wp-json";
 
@@ -47,11 +52,13 @@ class WPHomeyAPI {
     required String baseUrl,
     String wpJsonPath = '/wp-json',
     bool shouldDebug = true,
+    String uniqueId = "null",
     String locale = 'it',
   }) {
     _setBaseApi(baseUrl: baseUrl);
     _setApiPath(path: wpJsonPath);
     _setShouldDebug(value: shouldDebug);
+    _setUniqueDeviceId(value: uniqueId);
     _setLocale(locale);
     _setSecureStorage();
   }
@@ -75,13 +82,6 @@ class WPHomeyAPI {
       key: "authLogin",
       value: jsonEncode(wpUser.toJson()),
     );
-
-    if (wpUser.refreshToken != null) {
-      await _secureStorage.write(
-        key: "refreshToken",
-        value: wpUser.refreshToken,
-      );
-    }
   }
 
   /// Logout a user
@@ -132,6 +132,13 @@ class WPHomeyAPI {
     return _wpUser.token;
   }
 
+  /// Get the token for the user
+  static Future<String?> wpUserRefreshToken() async {
+    WpUser? _wpUser = await wpUser();
+    if (_wpUser == null) return null;
+    return _wpUser.refreshToken;
+  }
+
   /// Sets the base API in the class
   _setBaseApi({required baseUrl}) {
     this._baseUrl = baseUrl;
@@ -147,6 +154,19 @@ class WPHomeyAPI {
     this._shouldDebug = value;
   }
 
+  /// Sets the unique devide value in the class
+  _setUniqueDeviceId({String? value}) async {
+    if (value != null) {
+      this._uniqueDeviceId = value;
+    }
+
+    try {
+      this._uniqueDeviceId = await UniqueIdentifier.serial;
+    } on PlatformException {
+      this._uniqueDeviceId = "null";
+    }
+  }
+
   /// Returns the debug value
   bool? shouldDebug() {
     return this._shouldDebug;
@@ -160,6 +180,11 @@ class WPHomeyAPI {
   /// Returns the base URL
   String getBaseURLOnly() {
     return this._baseUrl;
+  }
+
+  /// Returns the Unique device id
+  String? getUniqueDeviceId() {
+    return this._uniqueDeviceId;
   }
 
   /// Returns an instance of [WPAppNetworkManager] which you can use to call

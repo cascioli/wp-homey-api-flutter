@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:nylo_support/helpers/model.dart';
 
 class WpUser extends Model {
@@ -68,4 +69,58 @@ class WpUser extends Model {
         'first_name': firstName,
         'last_name': lastName,
       };
+
+  WpUser copyWith({
+    ValueGetter<int?>? id,
+    ValueGetter<String?>? token,
+    ValueGetter<String?>? refreshToken,
+    ValueGetter<String?>? email,
+    ValueGetter<String?>? nicename,
+    ValueGetter<String?>? displayName,
+    ValueGetter<String?>? firstName,
+    ValueGetter<String?>? lastName,
+  }) {
+    return WpUser(
+      id: id != null ? id() : this.id,
+      token: token != null ? token() : this.token,
+      refreshToken: refreshToken != null ? refreshToken() : this.refreshToken,
+      email: email != null ? email() : this.email,
+      nicename: nicename != null ? nicename() : this.nicename,
+      displayName: displayName != null ? displayName() : this.displayName,
+      firstName: firstName != null ? firstName() : this.firstName,
+      lastName: lastName != null ? lastName() : this.lastName,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is WpUser &&
+        other.id == id &&
+        other.token == token &&
+        other.refreshToken == refreshToken &&
+        other.email == email &&
+        other.nicename == nicename &&
+        other.displayName == displayName &&
+        other.firstName == firstName &&
+        other.lastName == lastName;
+  }
+
+  @override
+  int get hashCode {
+    return id.hashCode ^
+        token.hashCode ^
+        refreshToken.hashCode ^
+        email.hashCode ^
+        nicename.hashCode ^
+        displayName.hashCode ^
+        firstName.hashCode ^
+        lastName.hashCode;
+  }
 }
