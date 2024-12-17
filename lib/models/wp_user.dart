@@ -10,6 +10,7 @@ class WpUser extends Model {
   String? displayName;
   String? firstName;
   String? lastName;
+  String? homeId;
 
   WpUser({
     this.id,
@@ -20,6 +21,7 @@ class WpUser extends Model {
     this.displayName,
     this.firstName,
     this.lastName,
+    this.homeId,
   });
 
   /// Creates a [WpUser] from a JSON object
@@ -30,8 +32,9 @@ class WpUser extends Model {
     email = json['email'];
     nicename = json['nicename'];
     displayName = json['displayName'];
-    firstName = json['first_name'];
-    lastName = json['last_name'];
+    firstName = json['firstName'];
+    lastName = json['lastName'];
+    homeId = json['home_id'];
   }
 
   /// Creates a [WpUser] from a [WPUserRegisterResponse]
@@ -66,8 +69,9 @@ class WpUser extends Model {
         'email': email,
         'nicename': nicename,
         'displayName': displayName,
-        'first_name': firstName,
-        'last_name': lastName,
+        'firstName': firstName,
+        'lastName': lastName,
+        'home_id': homeId,
       };
 
   WpUser copyWith({
@@ -79,6 +83,7 @@ class WpUser extends Model {
     ValueGetter<String?>? displayName,
     ValueGetter<String?>? firstName,
     ValueGetter<String?>? lastName,
+    ValueGetter<String?>? homeId,
   }) {
     return WpUser(
       id: id != null ? id() : this.id,
@@ -89,12 +94,13 @@ class WpUser extends Model {
       displayName: displayName != null ? displayName() : this.displayName,
       firstName: firstName != null ? firstName() : this.firstName,
       lastName: lastName != null ? lastName() : this.lastName,
+      homeId: homeId != null ? homeId() : this.homeId,
     );
   }
 
   @override
   String toString() {
-    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName)';
+    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName, homeId: $homeId)';
   }
 
   @override
@@ -109,7 +115,8 @@ class WpUser extends Model {
         other.nicename == nicename &&
         other.displayName == displayName &&
         other.firstName == firstName &&
-        other.lastName == lastName;
+        other.lastName == lastName &&
+        other.homeId == homeId;
   }
 
   @override
@@ -121,6 +128,7 @@ class WpUser extends Model {
         nicename.hashCode ^
         displayName.hashCode ^
         firstName.hashCode ^
-        lastName.hashCode;
+        lastName.hashCode ^
+        homeId.hashCode;
   }
 }

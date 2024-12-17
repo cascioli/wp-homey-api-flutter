@@ -85,7 +85,7 @@ class WPHomeyAPI {
   }
 
   /// Logout a user
-  static wpLogout() async {
+  static Future<void> wpLogout() async {
     await _secureStorage.delete(key: "authLogin");
   }
 

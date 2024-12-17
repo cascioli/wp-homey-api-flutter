@@ -66,16 +66,17 @@ class WPAppNetworkManager {
       refreshToken: refreshToken,
     );
 
-    List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
-    final _refreshTokenCookie = cookies
-        ?.firstWhereOrNull((element) => element.startsWith('refresh_token='));
-
     final json = response?.data;
 
+    // TODO: sistemare gestione errore autenticazione
     // return response
     if (_jsonHasBadStatus(json)) {
       return _throwExceptionForStatusCode(json);
     }
+
+    List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
+    final _refreshTokenCookie = cookies
+        ?.firstWhereOrNull((element) => element.startsWith('refresh_token='));
 
     WPUserLoginResponse wpUserLoginResponse =
         WPUserLoginResponse.fromJson(json);
@@ -292,7 +293,7 @@ class WPAppNetworkManager {
   }
 
   /// Logs out the user by deleting the user token from the local storage
-  wpLogout() async {
+  Future<void> wpLogout() async {
     await WPHomeyAPI.wpLogout();
   }
 
@@ -355,7 +356,7 @@ class WPAppNetworkManager {
   /// you can use these if the request requires them.
   ///
   /// Returns a [dynamic] response from the server.
-  Future<Response?> _http({
+  Future<dynamic> _http({
     required String method,
     required String url,
     Map<String, dynamic>? body,
@@ -366,7 +367,11 @@ class WPAppNetworkManager {
   }) async {
     Response? response;
     if (method == "GET") {
-      response = await dio.get(url);
+      try {
+        response = await dio.get(url);
+      } on DioException catch (e) {
+        return e;
+      }
     } else if (method == "POST") {
       Map<String, dynamic> headers = {
         HttpHeaders.contentTypeHeader: "application/json",
@@ -409,11 +414,15 @@ class WPAppNetworkManager {
         body = {};
       }
 
-      response = await dio.post(
-        url,
-        options: Options(headers: headers),
-        data: body,
-      );
+      try {
+        response = await dio.post(
+          url,
+          options: Options(headers: headers),
+          data: body,
+        );
+      } on DioException catch (e) {
+        return e;
+      }
     }
 
     // log output
