@@ -68,7 +68,7 @@ class WPAppNetworkManager {
 
     final json = response?.data;
 
-    // TODO: sistemare gestione errore autenticazione
+    // TODO(simlimone): sistemare gestione errore autenticazione
     // return response
     if (_jsonHasBadStatus(json)) {
       return _throwExceptionForStatusCode(json);
@@ -356,7 +356,7 @@ class WPAppNetworkManager {
   /// you can use these if the request requires them.
   ///
   /// Returns a [dynamic] response from the server.
-  Future<dynamic> _http({
+  Future<Response?> _http({
     required String method,
     required String url,
     Map<String, dynamic>? body,
@@ -370,7 +370,7 @@ class WPAppNetworkManager {
       try {
         response = await dio.get(url);
       } on DioException catch (e) {
-        return e;
+        throw e;
       }
     } else if (method == "POST") {
       Map<String, dynamic> headers = {
@@ -384,7 +384,8 @@ class WPAppNetworkManager {
             "multipart/form-data; charset=UTF-8";
       }
 
-      // Aggiungiamo il token JWT all'header se richiesto
+      // TODO(simlimone): fixare auth con token
+      /*// Aggiungiamo il token JWT all'header se richiesto
       String? userTokenFromStorage = await WPHomeyAPI.wpUserToken();
 
       // Aggiungiamo il refresh token JWT ai cookie se richiesto
@@ -406,7 +407,7 @@ class WPAppNetworkManager {
       }
       if (userToken != null) {
         headers['Authorization'] = 'Bearer $userToken';
-      }
+      }*/
 
       print("Header: ${headers}");
 
@@ -421,7 +422,7 @@ class WPAppNetworkManager {
           data: body,
         );
       } on DioException catch (e) {
-        return e;
+        throw e;
       }
     }
 
