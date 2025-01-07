@@ -108,7 +108,7 @@ class WpUser extends Model {
 
   @override
   String toString() {
-    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName)';
+    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName, homeIds: $homeIds, cityIds: $cityIds)';
   }
 
   @override
