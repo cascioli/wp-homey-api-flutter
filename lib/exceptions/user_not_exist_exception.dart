@@ -16,12 +16,12 @@
 import 'package:wp_homey_api/l10n/wp_homey_strings.dart';
 import 'package:wp_homey_api/wp_homey_api.dart';
 
-class UserExistsException implements Exception {
+class UserNotExistException implements Exception {
   String message;
-  UserExistsException([String? customMessage])
+  UserNotExistException([String? customMessage])
       : message = customMessage ??
             WPHomeyStrings.get(
-              'user_exists',
+              'user_not_exists',
               locale: WPHomeyAPI.currentLocale,
             );
 }

@@ -10,7 +10,8 @@ class WpUser extends Model {
   String? displayName;
   String? firstName;
   String? lastName;
-  String? homeId;
+  List<String>? homeIds;
+  List<String>? cityIds;
 
   WpUser({
     this.id,
@@ -21,7 +22,8 @@ class WpUser extends Model {
     this.displayName,
     this.firstName,
     this.lastName,
-    this.homeId,
+    this.homeIds,
+    this.cityIds,
   });
 
   /// Creates a [WpUser] from a JSON object
@@ -34,7 +36,10 @@ class WpUser extends Model {
     displayName = json['displayName'];
     firstName = json['firstName'];
     lastName = json['lastName'];
-    homeId = json['home_id'];
+    cityIds =
+        json['city_ids'] != null ? List<String>.from(json['city_ids']) : null;
+    homeIds =
+        json['home_ids'] != null ? List<String>.from(json['home_ids']) : null;
   }
 
   /// Creates a [WpUser] from a [WPUserRegisterResponse]
@@ -71,7 +76,8 @@ class WpUser extends Model {
         'displayName': displayName,
         'firstName': firstName,
         'lastName': lastName,
-        'home_id': homeId,
+        'home_ids': homeIds,
+        'city_ids': cityIds,
       };
 
   WpUser copyWith({
@@ -83,7 +89,8 @@ class WpUser extends Model {
     ValueGetter<String?>? displayName,
     ValueGetter<String?>? firstName,
     ValueGetter<String?>? lastName,
-    ValueGetter<String?>? homeId,
+    ValueGetter<List<String>?>? homeIds,
+    ValueGetter<List<String>?>? cityIds,
   }) {
     return WpUser(
       id: id != null ? id() : this.id,
@@ -94,13 +101,14 @@ class WpUser extends Model {
       displayName: displayName != null ? displayName() : this.displayName,
       firstName: firstName != null ? firstName() : this.firstName,
       lastName: lastName != null ? lastName() : this.lastName,
-      homeId: homeId != null ? homeId() : this.homeId,
+      homeIds: homeIds != null ? homeIds() : this.homeIds,
+      cityIds: cityIds != null ? cityIds() : this.cityIds,
     );
   }
 
   @override
   String toString() {
-    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName, homeId: $homeId)';
+    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName)';
   }
 
   @override
@@ -116,7 +124,8 @@ class WpUser extends Model {
         other.displayName == displayName &&
         other.firstName == firstName &&
         other.lastName == lastName &&
-        other.homeId == homeId;
+        other.homeIds == homeIds &&
+        other.cityIds == cityIds;
   }
 
   @override
@@ -129,6 +138,7 @@ class WpUser extends Model {
         displayName.hashCode ^
         firstName.hashCode ^
         lastName.hashCode ^
-        homeId.hashCode;
+        homeIds.hashCode ^
+        cityIds.hashCode;
   }
 }

@@ -13,14 +13,12 @@
 // IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
-import 'package:wp_homey_api/models/wp_user.dart';
-
 class WPTokenVerifiedResponse {
   bool? success;
   int? statusCode;
   String? code;
   String? message;
-  WpUser? data;
+  List<dynamic>? data;
 
   WPTokenVerifiedResponse({
     this.success,
@@ -31,9 +29,7 @@ class WPTokenVerifiedResponse {
   });
 
   WPTokenVerifiedResponse.fromJson(Map<String, dynamic> json) {
-    data = json['data'] != null && json['data'] != {} && json['data'] != []
-        ? new WpUser.fromJson(json['data'])
-        : null;
+    data = json['data'] ?? [];
     code = json['code'] ?? 'error';
     statusCode = json['statusCode'] ?? -1;
     message = json['message'] ?? 'Error retrieving message';
@@ -43,7 +39,7 @@ class WPTokenVerifiedResponse {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
     if (this.data != null) {
-      data['data'] = this.data!.toJson();
+      data['data'] = this.data!;
     }
     data['code'] = this.code;
     data['message'] = this.message;

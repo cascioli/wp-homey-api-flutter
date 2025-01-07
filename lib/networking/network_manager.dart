@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
+import 'package:wp_homey_api/exceptions/invalid_refresh_token_exception.dart';
+import 'package:wp_homey_api/exceptions/user_not_exist_exception.dart';
 import '/exceptions/empty_username_exception.dart';
 import '/exceptions/existing_user_email_exception.dart';
 import '/exceptions/existing_user_login_exception.dart';
@@ -49,7 +51,6 @@ class WPAppNetworkManager {
   Future<WPUserLoginResponse> wpLogin(
       {String? username,
       String? password,
-      String? refreshToken,
       bool saveTokenToLocalStorage = true}) async {
     // Creates payload for login
     Map<String, dynamic> payload = {};
@@ -63,12 +64,10 @@ class WPAppNetworkManager {
       method: "POST",
       url: _urlForRouteType(WPRouteType.AuthLogin),
       body: payload,
-      refreshToken: refreshToken,
     );
 
     final json = response?.data;
 
-    // TODO: sistemare gestione errore autenticazione
     // return response
     if (_jsonHasBadStatus(json)) {
       return _throwExceptionForStatusCode(json);
@@ -81,9 +80,7 @@ class WPAppNetworkManager {
     WPUserLoginResponse wpUserLoginResponse =
         WPUserLoginResponse.fromJson(json);
 
-    if (cookies != null &&
-        _refreshTokenCookie != null &&
-        wpUserLoginResponse.data != null) {
+    if (_refreshTokenCookie != null && wpUserLoginResponse.data != null) {
       wpUserLoginResponse.data = wpUserLoginResponse.data?.copyWith(
         refreshToken: () => _extractRefreshTokenFromCookie(_refreshTokenCookie),
       );
@@ -187,11 +184,12 @@ class WPAppNetworkManager {
         : WPTokenVerifiedResponse.fromJson(json);
   }
 
-  /// Sends a request to refresh [token] value.
+  /// Sends a request to refresh [refreshToken] value.
   ///
-  /// Returns a [WPUserLoginResponse] future.
+  /// Returns a [String] future.
   /// Throws an [Exception] if fails
-  Future<WPUserLoginResponse> wpAuthRefresh({String? refreshToken}) async {
+  Future<String?> wpGenerateNewRefreshToken(
+      {String? refreshToken, bool saveTokenToLocalStorage = true}) async {
     Map<String, dynamic> payload = {
       "device": WPHomeyAPI.instance.getUniqueDeviceId() ?? "null",
     };
@@ -212,10 +210,65 @@ class WPAppNetworkManager {
       return _throwExceptionForStatusCode(json);
     }
 
+    WPTokenVerifiedResponse wpValidResponse =
+        WPTokenVerifiedResponse.fromJson(json);
+    String? generatedRefreshToken;
+
+    List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
+    final _refreshTokenCookie = cookies
+        ?.firstWhereOrNull((element) => element.startsWith('refresh_token='));
+
+    if (cookies != null &&
+        _refreshTokenCookie != null &&
+        wpValidResponse.success!) {
+      generatedRefreshToken =
+          _extractRefreshTokenFromCookie(_refreshTokenCookie);
+    }
+
+    if (wpValidResponse.success! && saveTokenToLocalStorage) {
+      final user = await WPHomeyAPI.wpUser();
+
+      if (user == null) throw Exception("L'utente non ha effettuato il login.");
+
+      await WPHomeyAPI.wpLogin(
+        user.copyWith(refreshToken: () => generatedRefreshToken),
+      );
+    }
+
+    // return response
+    return generatedRefreshToken;
+  }
+
+  /// Sends a request to refresh [token] value.
+  ///
+  /// Returns a [WPUserLoginResponse] future.
+  /// Throws an [Exception] if fails
+  Future<WPUserLoginResponse> wpAuthRefresh(
+      {String? refreshToken, bool saveTokenToLocalStorage = true}) async {
+    Map<String, dynamic> payload = {
+      "device": WPHomeyAPI.instance.getUniqueDeviceId() ?? "null",
+    };
+
+    // send http request
+    final response = await _http(
+      method: "POST",
+      url: _urlForRouteType(WPRouteType.AuthLogin),
+      refreshToken: refreshToken,
+      shouldAuthRequest: true,
+      body: payload,
+    );
+
+    final json = response?.data;
+
+    // return response
+    if (_jsonHasBadStatus(json)) {
+      return _throwExceptionForStatusCode(json);
+    }
+
     WPUserLoginResponse wpUserLoginResponse =
         WPUserLoginResponse.fromJson(json);
 
-    List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
+    /*List<String>? cookies = response?.headers[HttpHeaders.setCookieHeader];
     final _refreshTokenCookie = cookies
         ?.firstWhereOrNull((element) => element.startsWith('refresh_token='));
 
@@ -225,6 +278,12 @@ class WPAppNetworkManager {
       wpUserLoginResponse.data = wpUserLoginResponse.data?.copyWith(
         refreshToken: () => _extractRefreshTokenFromCookie(_refreshTokenCookie),
       );
+    }*/
+
+    if (wpUserLoginResponse.data?.token != null && saveTokenToLocalStorage) {
+      WpUser wpUser = wpUserLoginResponse.data!;
+      await WPHomeyAPI.wpLogin(
+          wpUser.copyWith(refreshToken: () => refreshToken));
     }
 
     // return response
@@ -387,18 +446,8 @@ class WPAppNetworkManager {
       // Aggiungiamo il token JWT all'header se richiesto
       String? userTokenFromStorage = await WPHomeyAPI.wpUserToken();
 
-      // Aggiungiamo il refresh token JWT ai cookie se richiesto
-      String? userRefreshTokenFromStorage =
-          await WPHomeyAPI.wpUserRefreshToken();
-
-      if (userRefreshTokenFromStorage != null) {
-        headers[HttpHeaders.cookieHeader] =
-            "refresh_token=$userRefreshTokenFromStorage";
-      }
-
       if (refreshToken != null) {
-        headers[HttpHeaders.cookieHeader] =
-            "refresh_token=$userRefreshTokenFromStorage";
+        headers[HttpHeaders.cookieHeader] = "refresh_token=$refreshToken";
       }
 
       if (shouldAuthRequest && userTokenFromStorage != null) {
@@ -408,8 +457,6 @@ class WPAppNetworkManager {
         headers['Authorization'] = 'Bearer $userToken';
       }
 
-      print("Header: ${headers}");
-
       if (body == null) {
         body = {};
       }
@@ -417,10 +464,18 @@ class WPAppNetworkManager {
       try {
         response = await dio.post(
           url,
-          options: Options(headers: headers),
+          options: Options(
+            headers: headers,
+            validateStatus: (status) =>
+                status != null &&
+                ((status >= 200 && status < 300) ||
+                    status == 401 ||
+                    status == 403),
+          ),
           data: body,
         );
       } on DioException catch (e) {
+        print("Error in _http: $e");
         return e;
       }
     }
@@ -472,8 +527,8 @@ class WPAppNetworkManager {
     }
 
     return (json["statusCode"] >= 500 ||
-        json["code"] == "jwt_auth_invalid_token" ||
-        json["statusCode"] == 403);
+        json["statusCode"] == 403 ||
+        json["statusCode"] == 401);
   }
 
   /// Checks if a user registration response payload has a bad status (400,401,404).
@@ -482,7 +537,8 @@ class WPAppNetworkManager {
   _jsonHasBadStatusUserRegistration(json) {
     return (json["statusCode"] == 400 ||
         json["statusCode"] == 401 ||
-        json["statusCode"] == 404);
+        json["statusCode"] == 404 ||
+        json["statusCode"] == 403);
   }
 
   /// Creates an endpoint with the baseUrl and path.
@@ -560,13 +616,11 @@ class WPAppNetworkManager {
   }
 
   /// Throws an exception from the [json] status returned from payload.
-  _throwExceptionForStatusCode(Response? response) {
-    final json = response?.data;
-
-    if (json != null && json['status'] != null) {
-      int? statusCode = json["status"];
+  _throwExceptionForStatusCode(dynamic json) {
+    if (json != null && json['statusCode'] != null) {
+      int? statusCode = json["statusCode"];
       String? code = json["code"];
-      String message = json["message"] ?? 'Something went wrong';
+      String message = json["message"] ?? 'Qualcosa è andato storto';
 
       switch (statusCode) {
         case 650:
@@ -583,6 +637,23 @@ class WPAppNetworkManager {
               throw IncorrectPasswordException(message);
             case 'jwt_auth_invalid_token':
               throw InvalidUserTokenException();
+            case 'jwt_auth_no_auth_header':
+              throw InvalidUserTokenException();
+            case 'jwt_auth_user_not_found':
+              throw UserNotExistException();
+            case 'jwt_auth_obsolete_token':
+              throw InvalidUserTokenException();
+            default:
+              throw Exception(message);
+          }
+        case 401:
+          switch (code) {
+            case 'jwt_auth_invalid_refresh_token':
+              throw InvalidRefreshTokenException();
+            case 'jwt_auth_obsolete_refresh_token':
+              throw InvalidRefreshTokenException();
+            case 'jwt_auth_expired_refresh_token':
+              throw InvalidRefreshTokenException();
             default:
               throw Exception(message);
           }
@@ -615,7 +686,7 @@ class WPAppNetworkManager {
         default:
           {
             throw new Exception(
-                'Something went wrong, please check server response');
+                'Qualcosa è andato storto, per favore riprova più tardi.');
           }
       }
     }
