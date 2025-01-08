@@ -443,8 +443,7 @@ class WPAppNetworkManager {
             "multipart/form-data; charset=UTF-8";
       }
 
-      // TODO(simlimone): fixare auth con token
-      /*// Aggiungiamo il token JWT all'header se richiesto
+      // Aggiungiamo il token JWT all'header se richiesto
       String? userTokenFromStorage = await WPHomeyAPI.wpUserToken();
 
       if (refreshToken != null) {
@@ -456,7 +455,7 @@ class WPAppNetworkManager {
       }
       if (userToken != null) {
         headers['Authorization'] = 'Bearer $userToken';
-      }*/
+      }
 
       if (body == null) {
         body = {};
