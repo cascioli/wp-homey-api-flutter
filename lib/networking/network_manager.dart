@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:wp_homey_api/exceptions/invalid_refresh_token_exception.dart';
 import 'package:wp_homey_api/exceptions/user_not_exist_exception.dart';
+import 'package:wp_homey_api/models/responses/wp_help_email_response.dart';
 import '/exceptions/empty_username_exception.dart';
 import '/exceptions/existing_user_email_exception.dart';
 import '/exceptions/existing_user_login_exception.dart';
@@ -410,6 +411,30 @@ class WPAppNetworkManager {
         : WPUserResetPasswordResponse.fromJson(json);
   }
 
+  Future<WPHelpEmailResponse> sendEmail({
+    required String name,
+    required String email,
+    required String message,
+  }) async {
+    Map<String, dynamic> payload = {
+      'name': name,
+      'email': email,
+      'message': message,
+    };
+
+    final response = await _http(
+      method: "POST",
+      url: _urlForRouteType(WPRouteType.SendEmail),
+      body: payload,
+    );
+
+    final json = response?.data;
+
+    return _jsonHasBadStatus(json)
+        ? this._throwExceptionForStatusCode(json)
+        : WPHelpEmailResponse.fromJson(json);
+  }
+
   /// Sends a Http request using a valid request [method] and [url] endpoint
   /// from the WP_JSON_API plugin. The [body] and [userToken] is optional but
   /// you can use these if the request requires them.
@@ -588,6 +613,10 @@ class WPAppNetworkManager {
       case WPRouteType.UserUpdateInfo:
         {
           return "/wp/$apiVersion/users/me";
+        }
+      case WPRouteType.SendEmail:
+        {
+          return "/cascioli/v1/send-email";
         }
       /*case WPRouteType.UserUpdatePassword:
         {

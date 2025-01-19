@@ -53,4 +53,8 @@ enum WPRouteType {
   /// Route type [WPRouteType.AuthRefresh] is used to refresh the token without credentials.
   /// For WordPress
   AuthRefresh,
+
+  /// Route type [WPRouteType.SendEmail] is used to send email to users.
+  ///
+  SendEmail,
 }
