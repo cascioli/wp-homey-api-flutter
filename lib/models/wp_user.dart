@@ -12,6 +12,7 @@ class WpUser extends Model {
   String? lastName;
   List<String>? homeIds;
   List<String>? cityIds;
+  DateTime? refreshTokenExpiryDate;
 
   WpUser({
     this.id,
@@ -24,6 +25,7 @@ class WpUser extends Model {
     this.lastName,
     this.homeIds,
     this.cityIds,
+    this.refreshTokenExpiryDate,
   });
 
   /// Creates a [WpUser] from a JSON object
@@ -36,6 +38,9 @@ class WpUser extends Model {
     displayName = json['displayName'];
     firstName = json['firstName'];
     lastName = json['lastName'];
+    refreshTokenExpiryDate = json['refreshTokenExpiryDate'] != null
+        ? DateTime.parse(json['refreshTokenExpiryDate'])
+        : null;
     cityIds =
         json['city_ids'] != null ? List<String>.from(json['city_ids']) : null;
     homeIds =
@@ -78,6 +83,7 @@ class WpUser extends Model {
         'lastName': lastName,
         'home_ids': homeIds,
         'city_ids': cityIds,
+        'refreshTokenExpiryDate': refreshTokenExpiryDate?.toIso8601String(),
       };
 
   WpUser copyWith({
@@ -91,6 +97,7 @@ class WpUser extends Model {
     ValueGetter<String?>? lastName,
     ValueGetter<List<String>?>? homeIds,
     ValueGetter<List<String>?>? cityIds,
+    ValueGetter<DateTime?>? refreshTokenExpiryDate,
   }) {
     return WpUser(
       id: id != null ? id() : this.id,
@@ -103,12 +110,15 @@ class WpUser extends Model {
       lastName: lastName != null ? lastName() : this.lastName,
       homeIds: homeIds != null ? homeIds() : this.homeIds,
       cityIds: cityIds != null ? cityIds() : this.cityIds,
+      refreshTokenExpiryDate: refreshTokenExpiryDate != null
+          ? refreshTokenExpiryDate()
+          : this.refreshTokenExpiryDate,
     );
   }
 
   @override
   String toString() {
-    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName, homeIds: $homeIds, cityIds: $cityIds)';
+    return 'WpUser(id: $id, token: $token, refreshToken: $refreshToken, email: $email, nicename: $nicename, displayName: $displayName, firstName: $firstName, lastName: $lastName, homeIds: $homeIds, cityIds: $cityIds, refreshTokenExpiryDate: $refreshTokenExpiryDate)';
   }
 
   @override
@@ -125,7 +135,8 @@ class WpUser extends Model {
         other.firstName == firstName &&
         other.lastName == lastName &&
         other.homeIds == homeIds &&
-        other.cityIds == cityIds;
+        other.cityIds == cityIds &&
+        other.refreshTokenExpiryDate == refreshTokenExpiryDate;
   }
 
   @override
@@ -139,6 +150,7 @@ class WpUser extends Model {
         firstName.hashCode ^
         lastName.hashCode ^
         homeIds.hashCode ^
-        cityIds.hashCode;
+        cityIds.hashCode ^
+        refreshTokenExpiryDate.hashCode;
   }
 }

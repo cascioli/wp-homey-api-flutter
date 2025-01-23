@@ -84,6 +84,7 @@ class WPAppNetworkManager {
     if (_refreshTokenCookie != null && wpUserLoginResponse.data != null) {
       wpUserLoginResponse.data = wpUserLoginResponse.data?.copyWith(
         refreshToken: () => _extractRefreshTokenFromCookie(_refreshTokenCookie),
+        refreshTokenExpiryDate: () => DateTime.now().add(Duration(days: 30)),
       );
     }
 
@@ -152,6 +153,7 @@ class WPAppNetworkManager {
         wpUserRegisterResponse.data != null) {
       wpUserRegisterResponse.data = wpUserRegisterResponse.data?.copyWith(
         refreshToken: () => _extractRefreshTokenFromCookie(_refreshTokenCookie),
+        refreshTokenExpiryDate: () => DateTime.now().add(Duration(days: 30)),
       );
     }
 
@@ -185,11 +187,46 @@ class WPAppNetworkManager {
         : WPTokenVerifiedResponse.fromJson(json);
   }
 
+  Future<DateTime?> getRefreshTokenExpiryDate() async {
+    WpUser? user = await WPHomeyAPI.wpUser();
+    return user?.refreshTokenExpiryDate;
+  }
+
+  Future<bool> ensureRefreshTokenValidity() async {
+    // Retrieve the current token and its expiry date
+    DateTime? refreshTokenExpiryDate =
+        await getRefreshTokenExpiryDate(); // Implement this function to get the expiry date
+
+    // Check if the token is near expiration
+    if (refreshTokenExpiryDate != null &&
+        DateTime.now()
+            .isAfter(refreshTokenExpiryDate.subtract(Duration(days: 1)))) {
+      // Refresh Token is near expiration, request a new refresh token
+      String? refreshToken = await WPHomeyAPI.wpUserRefreshToken();
+      if (refreshToken != null) {
+        try {
+          await WPAppNetworkManager.instance
+              ._wpGenerateNewRefreshToken(refreshToken: refreshToken);
+
+          print("Refresh token invalid... refreshed");
+        } catch (e) {
+          print("Error refreshing token: $e");
+        }
+      }
+
+      return false;
+    }
+
+    print("Refresh Token expiry date valid or null");
+
+    return true;
+  }
+
   /// Sends a request to refresh [refreshToken] value.
   ///
   /// Returns a [String] future.
   /// Throws an [Exception] if fails
-  Future<String?> wpGenerateNewRefreshToken(
+  Future<String?> _wpGenerateNewRefreshToken(
       {String? refreshToken, bool saveTokenToLocalStorage = true}) async {
     Map<String, dynamic> payload = {
       "device": WPHomeyAPI.instance.getUniqueDeviceId() ?? "null",
@@ -232,7 +269,12 @@ class WPAppNetworkManager {
       if (user == null) throw Exception("L'utente non ha effettuato il login.");
 
       await WPHomeyAPI.wpLogin(
-        user.copyWith(refreshToken: () => generatedRefreshToken),
+        user.copyWith(
+          refreshToken: () => generatedRefreshToken,
+          refreshTokenExpiryDate: () => DateTime.now().add(
+            Duration(days: 30),
+          ),
+        ),
       );
     }
 
@@ -392,34 +434,34 @@ class WPAppNetworkManager {
     required String userEmail,
     String? userToken,
   }) async {
-    Map<String, dynamic> payload = {"user_login": userEmail};
+    FormData payload = FormData.fromMap({"user_login": userEmail});
 
     // send http request
     final response = await _http(
       method: "POST",
       url: _urlForRouteType(WPRouteType.UserUpdatePassword),
-      body: payload,
-      userToken: userToken,
+      dataBody: payload,
+      shouldSendformHeader: true,
       shouldAuthRequest: false,
     );
 
-    final json = response?.data;
+    final headers = response?.headers;
 
     // return response
-    return _jsonHasBadStatus(json)
-        ? this._throwExceptionForStatusCode(json)
-        : WPUserResetPasswordResponse.fromJson(json);
+    return WPUserResetPasswordResponse(headers: headers);
   }
 
   Future<WPHelpEmailResponse> sendEmail({
     required String name,
     required String email,
     required String message,
+    required String topic,
   }) async {
     Map<String, dynamic> payload = {
       'name': name,
       'email': email,
       'message': message,
+      'topic': topic,
     };
 
     final response = await _http(
@@ -444,6 +486,7 @@ class WPAppNetworkManager {
     required String method,
     required String url,
     Map<String, dynamic>? body,
+    FormData? dataBody,
     String? userToken,
     String? refreshToken,
     bool shouldAuthRequest = false,
@@ -493,11 +536,11 @@ class WPAppNetworkManager {
             headers: headers,
             validateStatus: (status) =>
                 status != null &&
-                ((status >= 200 && status < 300) ||
+                ((status >= 200 && status < 303) ||
                     status == 401 ||
                     status == 403),
           ),
-          data: body,
+          data: dataBody != null ? dataBody : body,
         );
       } on DioException catch (e) {
         print("Error in _http: $e");
