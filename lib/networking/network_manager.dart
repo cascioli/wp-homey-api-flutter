@@ -207,8 +207,6 @@ class WPAppNetworkManager {
         try {
           await WPAppNetworkManager.instance
               ._wpGenerateNewRefreshToken(refreshToken: refreshToken);
-
-          print("Refresh token invalid... refreshed");
         } catch (e) {
           print("Error refreshing token: $e");
         }
@@ -216,8 +214,6 @@ class WPAppNetworkManager {
 
       return false;
     }
-
-    print("Refresh Token expiry date valid or null");
 
     return true;
   }
